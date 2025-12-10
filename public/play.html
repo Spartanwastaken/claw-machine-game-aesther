@@ -213,13 +213,28 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('game-content').style.display = 'block';
                 
-                // Get gameplay settings - use server-side try tracking
+                // Get gameplay settings - pass actual tries remaining to block plays
                 const gameplayOptions = {
                     prizes,
                     clawStrength: settings?.gameplay?.clawStrength || 70,
                     dropChance: settings?.gameplay?.dropChance || 20,
-                    maxTries: 0  // Disable client-side limit, we track on server
+                    maxTries: triesRemaining,  // Block plays when out of tries
+                    triesUsed: 0  // Start at 0, maxTries = remaining
                 };
+                
+                // If no tries remaining, show message and block game
+                if (triesRemaining <= 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('game-content').innerHTML = `
+                        <div style="text-align:center;padding:40px;color:white;">
+                            <h2>❌ No Tries Remaining</h2>
+                            <p>You've used all ${maxTries} tries for today.</p>
+                            <p>Come back tomorrow for more plays!</p>
+                            <button onclick="window.close()" style="margin-top:20px;padding:10px 20px;font-size:16px;cursor:pointer;">Close</button>
+                        </div>
+                    `;
+                    return;
+                }
                 
                 console.log('Initializing with gameplay settings:', gameplayOptions);
                 
@@ -328,18 +343,20 @@
         
         // Listen for claw button press (try used)
         document.addEventListener('clawTryUsed', async function(e) {
-            const canPlay = await useATry();
+            await useATry();  // Sync with server
             
-            // Shuffle prizes after first grab
             if (!isFirstGrab) {
                 // Shuffle happens after prize is collected, not on try
             } else {
                 isFirstGrab = false;
             }
-            
-            if (!canPlay) {
-                alert('No tries remaining for today! Click "End Game" to finish.');
-            }
+        });
+        
+        // Listen for no tries left (claw machine blocks further plays)
+        document.addEventListener('clawNoTriesLeft', function() {
+            alert('No tries remaining for today! Click "End Game" to finish.');
+            // Automatically end the game
+            setTimeout(() => endGame(), 500);
         });
         
         // Listen for prize collection
@@ -357,7 +374,7 @@
             // Track prize locally
             prizesWon.push(prize);
             
-            // Send to server to add to inventory (but don't send Discord message yet)
+            // Send to server to add to inventory
             try {
                 const response = await fetch('/api/claw-machine/prize', {
                     method: 'POST',
@@ -366,7 +383,7 @@
                         sessionId: sessionId,
                         prize: prize,
                         userId: userId,
-                        silent: true  // Don't send Discord notification yet
+                        silent: true
                     })
                 });
                 
@@ -374,6 +391,8 @@
                 
                 if (data.success) {
                     showPrizeNotification(prize, data.addedToInventory, data.goldBonus, data.xpBonus);
+                } else {
+                    showPrizeNotification(prize, false, 0, 0);
                 }
             } catch (error) {
                 console.error('Failed to record prize:', error);
