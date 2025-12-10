@@ -128,6 +128,29 @@ async function fetchFromBot(endpoint) {
   return null;
 }
 
+// Helper to get current settings (from cache or fetch)
+async function getCurrentSettings() {
+  const now = Date.now();
+  
+  if (cachedSettings && (now - lastSettingsFetch) < CACHE_TTL) {
+    return cachedSettings;
+  }
+  
+  const settings = await fetchFromBot('/claw-settings');
+  if (settings) {
+    cachedSettings = settings;
+    lastSettingsFetch = now;
+    console.log('✅ Refreshed settings from local bot');
+    return settings;
+  }
+  
+  // Return defaults
+  return {
+    gameplay: { maxPlays: 5, winChance: 35 },
+    costs: { playCost: 100, currency: 'gold' }
+  };
+}
+
 // ===== API ROUTES =====
 
 // Health check
@@ -137,34 +160,8 @@ app.get('/health', (req, res) => {
 
 // Get game settings (fetched from your local bot)
 app.get('/api/games/claw-settings', async (req, res) => {
-  const now = Date.now();
-  
-  // Use cache if fresh
-  if (cachedSettings && (now - lastSettingsFetch) < CACHE_TTL) {
-    return res.json(cachedSettings);
-  }
-  
-  // Fetch from local bot
-  const settings = await fetchFromBot('/claw-settings');
-  if (settings) {
-    cachedSettings = settings;
-    lastSettingsFetch = now;
-    console.log('✅ Fetched claw settings from local bot');
-    return res.json(settings);
-  }
-  
-  // Fallback to defaults
-  res.json({
-    gameplay: GAME_SETTINGS,
-    prizes: {
-      selectedCategories: ['all'],
-      selectedRarities: ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
-    },
-    costs: {
-      playCost: 100,
-      currency: 'gold'
-    }
-  });
+  const settings = await getCurrentSettings();
+  res.json(settings);
 });
 
 // Get items (fetched from your local bot)
@@ -200,15 +197,19 @@ app.post('/api/refresh-cache', (req, res) => {
 });
 
 // Register a new session
-app.post('/api/claw-machine/session', (req, res) => {
+app.post('/api/claw-machine/session', async (req, res) => {
   const { sessionId, userId, channelId, guildId } = req.body;
   
   if (!sessionId) {
     return res.status(400).json({ success: false, error: 'Missing sessionId' });
   }
   
+  // Get current settings from bot
+  const settings = await getCurrentSettings();
+  const maxTries = settings?.gameplay?.maxPlays || GAME_SETTINGS.maxTries;
+  
   const triesUsed = getUserDailyTries(userId);
-  const triesRemaining = Math.max(0, GAME_SETTINGS.maxTries - triesUsed);
+  const triesRemaining = Math.max(0, maxTries - triesUsed);
   
   sessions.set(sessionId, {
     userId,
@@ -218,14 +219,15 @@ app.post('/api/claw-machine/session', (req, res) => {
     startTime: Date.now()
   });
   
-  console.log(`🎰 Session started: ${sessionId} for user ${userId} (${triesRemaining}/${GAME_SETTINGS.maxTries} tries)`);
+  console.log(`🎰 Session started: ${sessionId} for user ${userId} (${triesRemaining}/${maxTries} tries)`);
   
   res.json({
     success: true,
     triesUsed,
     triesRemaining,
-    maxTries: GAME_SETTINGS.maxTries,
-    glowRarities: GLOW_RARITIES
+    maxTries: maxTries,
+    glowRarities: GLOW_RARITIES,
+    settings: settings
   });
 });
 
@@ -240,24 +242,38 @@ app.get('/api/claw-machine/session/:sessionId', (req, res) => {
 });
 
 // Track a try used
-app.post('/api/claw-machine/use-try', (req, res) => {
+app.post('/api/claw-machine/use-try', async (req, res) => {
   const { userId } = req.body;
   
   if (!userId) {
     return res.status(400).json({ success: false, error: 'Missing userId' });
   }
   
-  const newTriesUsed = incrementUserTries(userId);
-  const triesRemaining = Math.max(0, GAME_SETTINGS.maxTries - newTriesUsed);
+  // Get current settings from bot
+  const settings = await getCurrentSettings();
+  const maxTries = settings?.gameplay?.maxPlays || GAME_SETTINGS.maxTries;
+  const playCost = settings?.costs?.playCost || 100;
   
-  console.log(`🎮 User ${userId} used a try: ${newTriesUsed}/${GAME_SETTINGS.maxTries}`);
+  const newTriesUsed = incrementUserTries(userId);
+  const triesRemaining = Math.max(0, maxTries - newTriesUsed);
+  
+  console.log(`🎮 User ${userId} used a try: ${newTriesUsed}/${maxTries}`);
+  
+  // Send webhook to deduct gold
+  const goldDeducted = await sendWebhook('try_used', {
+    userId,
+    goldCost: playCost,
+    triesUsed: newTriesUsed,
+    triesRemaining
+  });
   
   res.json({
     success: true,
     triesUsed: newTriesUsed,
     triesRemaining,
-    maxTries: GAME_SETTINGS.maxTries,
-    canPlay: triesRemaining > 0
+    maxTries: maxTries,
+    canPlay: triesRemaining > 0,
+    goldDeducted: goldDeducted ? playCost : 0
   });
 });
 
@@ -273,16 +289,23 @@ app.get('/api/claw-machine/roll-glow', (req, res) => {
 });
 
 // Get tries info
-app.get('/api/claw-machine/tries/:userId', (req, res) => {
+app.get('/api/claw-machine/tries/:userId', async (req, res) => {
   const { userId } = req.params;
+  
+  // Get current settings from bot
+  const settings = await getCurrentSettings();
+  const maxTries = settings?.gameplay?.maxPlays || GAME_SETTINGS.maxTries;
+  const playCost = settings?.costs?.playCost || 100;
+  
   const triesUsed = getUserDailyTries(userId);
-  const triesRemaining = Math.max(0, GAME_SETTINGS.maxTries - triesUsed);
+  const triesRemaining = Math.max(0, maxTries - triesUsed);
   
   res.json({
     success: true,
     triesUsed,
     triesRemaining,
-    maxTries: GAME_SETTINGS.maxTries
+    maxTries: maxTries,
+    playCost: playCost
   });
 });
 
