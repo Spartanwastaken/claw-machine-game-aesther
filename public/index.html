@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Claw Machine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(52, 152, 219, 0.5);
+        }
+        
+        .emoji {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h2 {
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        
+        .instructions ol {
+            text-align: left;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        code {
+            background: rgba(52, 152, 219, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .status {
+            background: rgba(46, 204, 113, 0.2);
+            border: 1px solid rgba(46, 204, 113, 0.5);
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .status.online {
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🎰</div>
+        <h1>Claw Machine</h1>
+        <p>Welcome to the Claw Machine game server!</p>
+        
+        <div class="instructions">
+            <h2>How to Play</h2>
+            <ol>
+                <li>Go to the Discord server with this bot</li>
+                <li>Use the <code>/clawmachine</code> command</li>
+                <li>Click the link the bot provides</li>
+                <li>Grab some prizes! 🎁</li>
+            </ol>
+        </div>
+        
+        <div class="status online" id="status">
+            ✅ Server Online
+        </div>
+    </div>
+    
+    <script>
+        // Check if accessed with session params
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('session') && params.get('user')) {
+            // Redirect to play page
+            window.location.href = '/play' + window.location.search;
+        }
+    </script>
+</body>
+</html>
