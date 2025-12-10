@@ -455,7 +455,7 @@
             const glowName = glowRarity !== 'none' ? glowRarity.charAt(0).toUpperCase() + glowRarity.slice(1) + ' Glow' : '';
             const glowStyle = glowColor ? `0 0 30px ${glowColor}, 0 0 60px ${glowColor}44` : '';
             
-            // Create pixel-style card
+            // Create pixel-style card - BIGGER VERSION
             const notification = document.createElement('div');
             notification.style.cssText = `
                 position: fixed;
@@ -473,48 +473,53 @@
                         100% { transform: translate(-50%, -50%) scale(1); }
                     }
                     @keyframes sparkle {
-                        0%, 100% { opacity: 0.5; }
-                        50% { opacity: 1; }
+                        0%, 100% { opacity: 0.5; transform: scale(1); }
+                        50% { opacity: 1; transform: scale(1.05); }
                     }
                     @keyframes glowPulse {
                         0%, 100% { box-shadow: ${glowStyle}; }
-                        50% { box-shadow: ${glowColor ? `0 0 50px ${glowColor}, 0 0 80px ${glowColor}66` : 'none'}; }
+                        50% { box-shadow: ${glowColor ? `0 0 60px ${glowColor}, 0 0 100px ${glowColor}66` : 'none'}; }
+                    }
+                    @keyframes floatUp {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-5px); }
                     }
                     .pixel-card {
                         background: ${colors.bg};
-                        border: 4px solid ${glowColor || colors.border};
+                        border: 6px solid ${glowColor || colors.border};
                         box-shadow: 
-                            0 0 0 2px #000,
+                            0 0 0 3px #000,
                             ${glowStyle ? glowStyle + ',' : ''}
-                            0 0 20px ${colors.border}66,
-                            inset 0 0 20px rgba(0,0,0,0.3);
+                            0 0 40px ${colors.border}66,
+                            inset 0 0 30px rgba(0,0,0,0.3);
                         padding: 0;
-                        width: 300px;
+                        width: 420px;
+                        max-width: 95vw;
                         image-rendering: pixelated;
                         font-family: 'Press Start 2P', 'Courier New', monospace;
                         ${glowColor ? 'animation: glowPulse 2s ease-in-out infinite;' : ''}
                     }
                     .pixel-card-header {
                         background: linear-gradient(180deg, ${glowColor || colors.border} 0%, ${colors.bg} 100%);
-                        padding: 8px 12px;
-                        border-bottom: 2px solid #000;
+                        padding: 14px 18px;
+                        border-bottom: 3px solid #000;
                         text-align: center;
-                        font-size: 10px;
+                        font-size: 16px;
                         color: #fff;
-                        text-shadow: 2px 2px 0 #000;
-                        letter-spacing: 1px;
+                        text-shadow: 3px 3px 0 #000;
+                        letter-spacing: 2px;
                     }
                     .pixel-card-body {
-                        padding: 15px;
+                        padding: 25px;
                         text-align: center;
                     }
                     .pixel-card-image {
-                        width: 80px;
-                        height: 80px;
-                        margin: 0 auto 10px;
+                        width: 120px;
+                        height: 120px;
+                        margin: 0 auto 15px;
                         image-rendering: pixelated;
-                        filter: drop-shadow(3px 3px 0 #000) ${glowColor ? `drop-shadow(0 0 10px ${glowColor})` : ''};
-                        animation: sparkle 1s ease-in-out infinite;
+                        filter: drop-shadow(4px 4px 0 #000) ${glowColor ? `drop-shadow(0 0 15px ${glowColor})` : ''};
+                        animation: floatUp 2s ease-in-out infinite;
                     }
                     .pixel-card-image img {
                         width: 100%;
@@ -522,61 +527,68 @@
                         object-fit: contain;
                     }
                     .pixel-card-emoji {
-                        font-size: 64px;
-                        margin-bottom: 10px;
-                        filter: drop-shadow(3px 3px 0 #000) ${glowColor ? `drop-shadow(0 0 10px ${glowColor})` : ''};
-                        animation: sparkle 1s ease-in-out infinite;
+                        font-size: 96px;
+                        margin-bottom: 15px;
+                        filter: drop-shadow(4px 4px 0 #000) ${glowColor ? `drop-shadow(0 0 15px ${glowColor})` : ''};
+                        animation: floatUp 2s ease-in-out infinite;
                     }
                     .pixel-card-name {
-                        font-size: 11px;
+                        font-size: 16px;
                         color: #fff;
-                        text-shadow: 2px 2px 0 #000;
-                        margin-bottom: 8px;
-                        line-height: 1.4;
+                        text-shadow: 3px 3px 0 #000;
+                        margin-bottom: 12px;
+                        line-height: 1.5;
                     }
                     .pixel-card-rarity {
-                        font-size: 8px;
+                        font-size: 12px;
                         color: ${colors.text};
-                        text-shadow: 1px 1px 0 #000;
-                        margin-bottom: 6px;
-                        padding: 4px 8px;
+                        text-shadow: 2px 2px 0 #000;
+                        margin-bottom: 10px;
+                        padding: 6px 14px;
                         background: rgba(0,0,0,0.3);
                         display: inline-block;
+                        border: 2px solid ${colors.border};
                     }
                     .pixel-card-glow {
-                        font-size: 8px;
+                        font-size: 12px;
                         color: ${glowColor || '#888'};
-                        text-shadow: 1px 1px 0 #000, ${glowColor ? `0 0 10px ${glowColor}` : 'none'};
-                        margin-bottom: 10px;
-                        padding: 4px 8px;
-                        background: rgba(0,0,0,0.4);
+                        text-shadow: 2px 2px 0 #000, ${glowColor ? `0 0 15px ${glowColor}` : 'none'};
+                        margin-bottom: 15px;
+                        padding: 8px 14px;
+                        background: rgba(0,0,0,0.5);
                         display: inline-block;
-                        border: 1px solid ${glowColor || '#444'};
+                        border: 2px solid ${glowColor || '#444'};
+                        animation: sparkle 1.5s ease-in-out infinite;
                     }
                     .pixel-card-bonus {
-                        font-size: 8px;
+                        font-size: 14px;
                         color: #ffd700;
-                        text-shadow: 1px 1px 0 #000;
-                        margin-bottom: 10px;
+                        text-shadow: 2px 2px 0 #000;
+                        margin-bottom: 15px;
+                        padding: 10px 16px;
+                        background: rgba(255, 215, 0, 0.15);
+                        border: 2px solid #ffd700;
+                        display: inline-block;
                     }
                     .pixel-card-desc {
-                        font-size: 8px;
+                        font-size: 11px;
                         color: ${colors.text};
                         text-shadow: 1px 1px 0 #000;
-                        line-height: 1.6;
+                        line-height: 1.8;
                         font-style: italic;
-                        padding: 10px;
-                        background: rgba(0,0,0,0.2);
-                        border: 2px solid rgba(0,0,0,0.3);
+                        padding: 14px;
+                        background: rgba(0,0,0,0.25);
+                        border: 3px solid rgba(0,0,0,0.4);
+                        margin-top: 10px;
                     }
                     .pixel-card-footer {
-                        background: rgba(0,0,0,0.3);
-                        padding: 8px 12px;
-                        border-top: 2px solid #000;
+                        background: rgba(0,0,0,0.4);
+                        padding: 12px 18px;
+                        border-top: 3px solid #000;
                         text-align: center;
-                        font-size: 8px;
+                        font-size: 12px;
                         color: #90EE90;
-                        text-shadow: 1px 1px 0 #000;
+                        text-shadow: 2px 2px 0 #000;
                     }
                 </style>
                 <div class="pixel-card">
