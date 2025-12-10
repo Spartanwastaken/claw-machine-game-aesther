@@ -103,6 +103,31 @@ async function sendWebhook(event, data) {
   }
 }
 
+// ===== CACHED DATA (fetched from local bot) =====
+let cachedSettings = null;
+let cachedItems = null;
+let lastSettingsFetch = 0;
+let lastItemsFetch = 0;
+const CACHE_TTL = 30000; // 30 seconds cache
+
+// Helper to fetch from local bot
+async function fetchFromBot(endpoint) {
+  if (!BOT_WEBHOOK_URL) return null;
+  
+  try {
+    const baseUrl = BOT_WEBHOOK_URL.replace('/claw-webhook', '');
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      headers: { 'X-Webhook-Secret': WEBHOOK_SECRET }
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (e) {
+    console.log(`Could not fetch ${endpoint} from bot:`, e.message);
+  }
+  return null;
+}
+
 // ===== API ROUTES =====
 
 // Health check
@@ -110,38 +135,68 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// Get game settings
-app.get('/api/games/claw-settings', (req, res) => {
+// Get game settings (fetched from your local bot)
+app.get('/api/games/claw-settings', async (req, res) => {
+  const now = Date.now();
+  
+  // Use cache if fresh
+  if (cachedSettings && (now - lastSettingsFetch) < CACHE_TTL) {
+    return res.json(cachedSettings);
+  }
+  
+  // Fetch from local bot
+  const settings = await fetchFromBot('/claw-settings');
+  if (settings) {
+    cachedSettings = settings;
+    lastSettingsFetch = now;
+    console.log('✅ Fetched claw settings from local bot');
+    return res.json(settings);
+  }
+  
+  // Fallback to defaults
   res.json({
     gameplay: GAME_SETTINGS,
     prizes: {
       selectedCategories: ['all'],
       selectedRarities: ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
+    },
+    costs: {
+      playCost: 100,
+      currency: 'gold'
     }
   });
 });
 
-// Get items (fetched from your bot or hardcoded)
-// You'll need to provide these items - either hardcode or fetch from your bot
+// Get items (fetched from your local bot)
 app.get('/api/items', async (req, res) => {
-  // Try to fetch from bot webhook
-  if (BOT_WEBHOOK_URL) {
-    try {
-      const baseUrl = BOT_WEBHOOK_URL.replace('/claw-webhook', '');
-      const response = await fetch(`${baseUrl}/claw-items`, {
-        headers: { 'X-Webhook-Secret': WEBHOOK_SECRET }
-      });
-      if (response.ok) {
-        const items = await response.json();
-        return res.json(items);
-      }
-    } catch (e) {
-      console.log('Could not fetch items from bot, using empty set');
-    }
+  const now = Date.now();
+  
+  // Use cache if fresh
+  if (cachedItems && (now - lastItemsFetch) < CACHE_TTL) {
+    return res.json(cachedItems);
+  }
+  
+  // Fetch from local bot
+  const items = await fetchFromBot('/claw-items');
+  if (items) {
+    cachedItems = items;
+    lastItemsFetch = now;
+    console.log('✅ Fetched items from local bot');
+    return res.json(items);
   }
   
   // Return empty if no items configured
   res.json({ items: {} });
+});
+
+// Force refresh cache
+app.post('/api/refresh-cache', (req, res) => {
+  cachedSettings = null;
+  cachedItems = null;
+  lastSettingsFetch = 0;
+  lastItemsFetch = 0;
+  console.log('🔄 Cache cleared');
+  res.json({ success: true, message: 'Cache cleared' });
 });
 
 // Register a new session
